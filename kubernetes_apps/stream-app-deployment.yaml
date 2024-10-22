@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stream-app-deployment
+spec:
+  replicas: 3  # Number of replicas (adjust as needed)
+  selector:
+    matchLabels:
+      app: stream-app
+  template:
+    metadata:
+      labels:
+        app: stream-app
+    spec:
+      containers:
+      - name: stream-app-container
+        image: eddieadi/stream_app:latest
+        ports:
+        - containerPort: 5000  # Assuming your app runs on port 5000 in the container
+        env:
+        - name: ENV_VAR  # Example of passing environment variables
+          value: "production"
+      imagePullSecrets:
+      - name: my-dockerhub-secret
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: stream-app-service
+spec:
+  type: NodePort
+  selector:
+    app: stream-app
+  ports:
+    - protocol: TCP
+      port: 5000
+      targetPort: 5000
+      nodePort: 30080
