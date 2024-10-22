@@ -1,18 +1,12 @@
-replicaCount: 3
+mysql:
+  rootPassword: q5gO2Ovmqf46BSFfIA
+  replicaCount: 1
+  storageSize: 1Gi
 
-image:
-  repository: eddieadi/stream_app
-  tag: latest
-  pullPolicy: IfNotPresent
-
-service:
-  type: NodePort
-  port: 5000
-  targetPort: 5000
+streamApp:
+  replicaCount: 3
+  image:
+    repository: eddieadi/stream_app
+    tag: latest
+  serviceAccountName: stream-app-sa
   nodePort: 30080
-
-env:
-  ENV_VAR: production
-
-imagePullSecrets:
-  - name: my-dockerhub-secret

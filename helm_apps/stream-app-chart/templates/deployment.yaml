@@ -1,28 +1,34 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Release.Name }}-deployment
-  labels:
-    app: {{ .Release.Name }}
+  name: stream-app-deployment
 spec:
-  replicas: {{ .Values.replicaCount }}
+  replicas: {{ .Values.streamApp.replicaCount }}
   selector:
     matchLabels:
-      app: {{ .Release.Name }}
+      app: stream-app
   template:
     metadata:
       labels:
-        app: {{ .Release.Name }}
+        app: stream-app
     spec:
+      serviceAccountName: {{ .Values.streamApp.serviceAccountName }}
       containers:
-      - name: {{ .Release.Name }}-container
-        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+      - name: stream-app-container
+        image: {{ .Values.streamApp.image.repository }}:{{ .Values.streamApp.image.tag }}
         ports:
-        - containerPort: {{ .Values.service.port }}
+        - containerPort: 5000
         env:
         - name: ENV_VAR
-          value: "{{ .Values.env.ENV_VAR }}"
+          value: "production"
+        - name: MYSQL_HOST
+          value: "mysql-container"
+        - name: MYSQL_PORT
+          value: "3306"
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            configMapKeyRef:
+              name: mysql-config
+              key: MYSQL_ROOT_PASSWORD
       imagePullSecrets:
-      {{- if .Values.imagePullSecrets }}
-      {{ toYaml .Values.imagePullSecrets | indent 6 }}
-      {{- end }}
+      - name: my-dockerhub-secret
