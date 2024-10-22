@@ -1,9 +1,87 @@
+# ConfigMap to store the MySQL root password
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-config
+data:
+  MYSQL_ROOT_PASSWORD: q5gO2Ovmqf46BSFfIA
+
+---
+# StatefulSet for MySQL
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql
+spec:
+  serviceName: "mysql-headless"
+  replicas: 1  # Adjust replicas as per requirement
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+      - name: mysql
+        image: mysql:5.7
+        ports:
+        - containerPort: 3306
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            configMapKeyRef:
+              name: mysql-config
+              key: MYSQL_ROOT_PASSWORD
+        volumeMounts:
+        - name: mysql-persistent-storage
+          mountPath: /var/lib/mysql
+  volumeClaimTemplates:
+  - metadata:
+      name: mysql-persistent-storage
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 1Gi  # Adjust storage size as per need
+
+---
+# Headless Service for MySQL StatefulSet
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-headless
+spec:
+  clusterIP: None  # Headless service
+  ports:
+  - port: 3306
+  selector:
+    app: mysql
+
+---
+# External Service to expose MySQL StatefulSet
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-container
+spec:
+  type: ClusterIP  # Keep this internal
+  ports:
+    - protocol: TCP
+      port: 3306
+      targetPort: 3306
+  selector:
+    app: mysql
+
+---
+# Deployment for the Stream App
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: stream-app-deployment
 spec:
-  replicas: 3  # Number of replicas (adjust as needed)
+  replicas: 3  # Number of replicas
   selector:
     matchLabels:
       app: stream-app
@@ -21,10 +99,20 @@ spec:
         env:
         - name: ENV_VAR  # Example of passing environment variables
           value: "production"
+        - name: MYSQL_HOST  # Environment variable for the MySQL host
+          value: "mysql-container"  # This is the internal service name for MySQL
+        - name: MYSQL_PORT  # Environment variable for MySQL port
+          value: "3306"
+        - name: MYSQL_ROOT_PASSWORD  # Environment variable for MySQL root password
+          valueFrom:
+            configMapKeyRef:
+              name: mysql-config
+              key: MYSQL_ROOT_PASSWORD
       imagePullSecrets:
       - name: my-dockerhub-secret
 
 ---
+# Service for the Stream App
 apiVersion: v1
 kind: Service
 metadata:
