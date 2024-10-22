@@ -12,6 +12,7 @@ spec:
       labels:
         app: stream-app
     spec:
+      serviceAccountName: stream-app-sa
       containers:
       - name: stream-app-container
         image: eddieadi/stream_app:latest
