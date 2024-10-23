@@ -7,6 +7,36 @@ data:
   MYSQL_ROOT_PASSWORD: q5gO2Ovmqf46BSFfIA
 
 ---
+# PersistentVolume for shared storage (shared between stream-app pods)
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: shared-volume
+spec:
+  accessModes:
+    - ReadWriteMany   # Allow multiple pods to read/write
+  capacity:
+    storage: 2Gi      # Define storage capacity (adjust as needed)
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: "manual"
+  hostPath:
+    path: "/mnt/shared"  # Path on the host where the data will be stored (specific to your environment)
+
+---
+# PersistentVolumeClaim for the shared storage
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: shared-volume-claim
+spec:
+  accessModes:
+    - ReadWriteMany  # Allows multiple pods to access the volume
+  resources:
+    requests:
+      storage: 2Gi   # Requesting 2Gi of storage
+  storageClassName: "manual"
+
+---
 # StatefulSet for MySQL
 apiVersion: apps/v1
 kind: StatefulSet
@@ -91,6 +121,11 @@ spec:
         app: stream-app
     spec:
       serviceAccountName: stream-app-sa
+      volumes:  # Correct placement of volumes
+      - name: shared-volume
+        persistentVolumeClaim:
+          claimName: shared-volume-claim
+      
       containers:
       - name: stream-app-container
         image: eddieadi/stream_app:latest
@@ -108,9 +143,11 @@ spec:
             configMapKeyRef:
               name: mysql-config
               key: MYSQL_ROOT_PASSWORD
+        volumeMounts:
+        - name: shared-volume
+          mountPath: /mnt/shared  # Shared volume will be mounted here in the containers
       imagePullSecrets:
       - name: my-dockerhub-secret
-
 ---
 # Service for the Stream App
 apiVersion: v1
